@@ -20,14 +20,15 @@ jobs:
           cache: pip
       - name: Instalar dependências
         run: |
-          sudo apt-get update && sudo apt-get install -y --no-install-recommends libgl1 libglib2.0-0t64
           python -m pip install --upgrade pip
           pip install -r requirements-dev.txt
-      - name: Lint
-        run: ruff check --select E9,F63,F7,F82 .
+      - name: Lint e formatação
+        run: |
+          ruff check .
+          ruff format --check .
       - name: Build
         run: |
           python -m compileall -q src tests
           python -c "import sys; sys.path.insert(0, 'src'); import security_system"
       - name: Testes
-        run: python -m pytest -q -p no:cacheprovider
+        run: python -m pytest -q -p no:cacheprovider --cov=src --cov-report=term --cov-fail-under=75

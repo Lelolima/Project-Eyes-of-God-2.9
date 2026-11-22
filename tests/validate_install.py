@@ -4,8 +4,8 @@ Script de validação de instalação
 Verifica se todas as dependências e configurações estão corretas
 """
 
-import sys
 import json
+import sys
 from pathlib import Path
 
 
@@ -32,18 +32,13 @@ def check_dependencies():
     """Verifica dependências instaladas"""
     print_header("Dependências")
 
-    deps = {
-        'cv2': 'opencv-python',
-        'numpy': 'numpy',
-        'tensorflow': 'tensorflow',
-        'requests': 'requests'
-    }
+    deps = {"cv2": "opencv-python", "numpy": "numpy", "tensorflow": "tensorflow", "requests": "requests"}
 
     all_ok = True
     for module, package in deps.items():
         try:
             mod = __import__(module)
-            version = getattr(mod, '__version__', 'desconhecida')
+            version = getattr(mod, "__version__", "desconhecida")
             print(f"✅ {package}: {version}")
         except ImportError:
             print(f"❌ {package}: NÃO INSTALADO")
@@ -56,22 +51,22 @@ def check_config():
     """Verifica arquivo de configuração"""
     print_header("Configuração")
 
-    config_path = Path('config.json')
+    config_path = Path("config.json")
     if not config_path.exists():
         print("❌ config.json não encontrado")
         return False
 
     try:
-        with open(config_path, 'r') as f:
+        with open(config_path) as f:
             config = json.load(f)
 
-        required_keys = ['security_level', 'video_sources', 'log_level']
+        required_keys = ["security_level", "video_sources", "log_level"]
         for key in required_keys:
             if key not in config:
                 print(f"❌ Chave '{key}' faltando em config.json")
                 return False
 
-        print(f"✅ Configuração válida")
+        print("✅ Configuração válida")
         print(f"   Fontes de vídeo: {len(config['video_sources'])}")
         print(f"   Nível de segurança: {config['security_level']}")
         print(f"   Level de log: {config['log_level']}")
@@ -86,7 +81,7 @@ def check_directories():
     """Verifica diretórios necessários"""
     print_header("Diretórios")
 
-    dirs = ['incidents', 'logs', 'models']
+    dirs = ["incidents", "logs", "models"]
     all_ok = True
 
     for d in dirs:
@@ -103,16 +98,16 @@ def check_source_code():
     """Verifica código fonte"""
     print_header("Código Fonte")
 
-    src_path = Path('src/security_system.py')
+    src_path = Path("src/security_system.py")
     if not src_path.exists():
         print("❌ src/security_system.py não encontrado")
         return False
 
     # Verificar imports
-    with open(src_path, 'r', encoding='utf-8') as f:
+    with open(src_path, encoding="utf-8") as f:
         content = f.read()
 
-    required_imports = ['import cv2', 'import numpy', 'import tensorflow', 'import requests']
+    required_imports = ["import cv2", "import numpy", "import tensorflow", "import requests"]
     for imp in required_imports:
         if imp not in content:
             print(f"❌ Import faltando: {imp}")
@@ -127,10 +122,10 @@ def run_syntax_check():
     """Verifica sintaxe Python"""
     print_header("Sintaxe Python")
 
-    src_path = Path('src/security_system.py')
+    src_path = Path("src/security_system.py")
     try:
-        with open(src_path, 'r', encoding='utf-8') as f:
-            compile(f.read(), src_path, 'exec')
+        with open(src_path, encoding="utf-8") as f:
+            compile(f.read(), src_path, "exec")
         print("✅ Sintaxe válida")
         return True
     except SyntaxError as e:

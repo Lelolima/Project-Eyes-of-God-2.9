@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 190" width="900" height="190" role="img" aria-labelledby="t d">
+  <title id="t">O-olho-de-DEUS v2 (legado)</title>
+  <desc id="d">Banner da versão 2 legada. A versão mantida é a v3, no repositório O-olho-de-DEUS.</desc>
+  <style>
+    :root { --bg: #f6f8fa; --fg: #1f2328; --muted: #57606a; --warn: #9a6700; --warnbg: #fff8c5; --accent: #0969da; --line: #d0d7de; }
+    @media (prefers-color-scheme: dark) {
+      :root { --bg: #0d1117; --fg: #e6edf3; --muted: #9198a1; --warn: #d29922; --warnbg: #2d2410; --accent: #4493f8; --line: #30363d; }
+    }
+    .bg { fill: var(--bg); stroke: var(--line); }
+    .title { fill: var(--fg); font: 700 34px system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+    .sub { fill: var(--muted); font: 400 16px system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+    .badge { fill: var(--warnbg); stroke: var(--warn); stroke-width: 1.5; }
+    .bt { fill: var(--warn); font: 700 14px ui-monospace, SFMono-Regular, Consolas, monospace; }
+    .link { fill: var(--accent); font: 600 14px ui-monospace, SFMono-Regular, Consolas, monospace; }
+    .eye { fill: none; stroke: var(--muted); stroke-width: 4; }
+    .iris { fill: var(--muted); animation: blink 5s ease-in-out infinite; transform-origin: 110px 95px; }
+    .pulse { animation: pulse 2s ease-in-out infinite; }
+    @keyframes blink { 0%, 92%, 100% { transform: scaleY(1); } 96% { transform: scaleY(0.1); } }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .45; } }
+    @media (prefers-reduced-motion: reduce) { .iris, .pulse { animation: none; } }
+  </style>
+  <rect class="bg" x="1" y="1" width="898" height="188" rx="14"/>
+  <path class="eye" d="M40 95 Q110 35 180 95 Q110 155 40 95 Z"/>
+  <circle class="iris" cx="110" cy="95" r="19"/>
+  <text class="title" x="215" y="78">O-olho-de-DEUS v2</text>
+  <rect class="badge pulse" x="560" y="50" width="150" height="34" rx="17"/>
+  <text class="bt" x="635" y="72" text-anchor="middle">VERSÃO LEGADA</text>
+  <text class="sub" x="215" y="112">Detecção de rostos (Haar) e registro de incidentes em script único</text>
+  <text class="link" x="215" y="150">Versão mantida: github.com/Lelolima/O-olho-de-DEUS (v3)</text>
+</svg>
