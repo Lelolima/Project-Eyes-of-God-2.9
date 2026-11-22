@@ -11,8 +11,8 @@ import numpy as np
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-import security_system  # noqa: E402
-from security_system import AISecuritySystem, ConfigManager, SecureDataHandler  # noqa: E402
+import security_system
+from security_system import AISecuritySystem, ConfigManager, SecureDataHandler
 
 
 def _system():
@@ -67,8 +67,9 @@ class TestNotifications(unittest.TestCase):
         system = _system()
         system.config_manager.config["notification_emails"] = []
         system.config_manager.config["notification_webhook"] = "https://hooks.example.com/x"
-        with patch.object(security_system.requests, "post",
-                          side_effect=security_system.requests.ConnectionError("down")):
+        with patch.object(
+            security_system.requests, "post", side_effect=security_system.requests.ConnectionError("down")
+        ):
             self.assertEqual(system._notify_authorities({"id": "x"}), [])
 
 
