@@ -1,0 +1,3 @@
+# Opcional: apenas se existir models/behavior_detection_model.h5
+-r requirements.txt
+tensorflow>=2.13.0

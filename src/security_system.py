@@ -6,9 +6,14 @@ Sistema avançado de monitoramento e detecção facial
 
 import cv2
 import numpy as np
-import tensorflow as tf
-from tensorflow.keras.models import load_model
-from tensorflow.keras.preprocessing import image
+# TensorFlow é opcional: só é necessário quando existe models/behavior_detection_model.h5.
+# (Antes era importado no topo, tornando o TF ~500 MB obrigatório até para os testes.)
+try:
+    from tensorflow.keras.models import load_model
+    from tensorflow.keras.preprocessing import image
+except ImportError:  # pragma: no cover - depende do ambiente
+    load_model = None
+    image = None
 from concurrent.futures import ThreadPoolExecutor
 import logging
 import os
@@ -59,8 +64,14 @@ class SecureDataHandler:
     """Tratamento seguro de dados sensíveis"""
 
     @staticmethod
-    def hash_sensitive_data(data: str, salt: str = "olho-de-deus-salt-2026") -> str:
-        """Hash de dados sensíveis com salt"""
+    def hash_sensitive_data(data: str, salt: Optional[str] = None) -> str:
+        """Hash de dados sensíveis com salt.
+
+        O salt pode ser definido em SECURITY_HASH_SALT; sem ela usa o valor
+        histórico (público no código) para manter compatibilidade dos hashes.
+        """
+        if salt is None:
+            salt = os.environ.get("SECURITY_HASH_SALT", "olho-de-deus-salt-2026")
         salted = f"{salt}{data}"
         return hashlib.sha256(salted.encode()).hexdigest()
 
@@ -142,7 +153,11 @@ class AISecuritySystem:
 
         # Modelo de comportamento (opcional)
         behavior_model_path = Path("models/behavior_detection_model.h5")
-        if behavior_model_path.exists():
+        if behavior_model_path.exists() and load_model is None:
+            logging.warning("Modelo comportamental encontrado, mas TensorFlow não está instalado "
+                            "(pip install -r requirements-ml.txt) - usando modo básico")
+            self.behavior_model = None
+        elif behavior_model_path.exists():
             try:
                 self.behavior_model = load_model(behavior_model_path)
                 logging.info("Modelo comportamental carregado")
@@ -163,7 +178,8 @@ class AISecuritySystem:
                 return
 
             logging.info(f"Iniciando processamento: {video_source}")
-            cap = cv2.VideoCapture(video_source)
+            # Webcam precisa de índice inteiro; VideoCapture("0") tenta abrir um arquivo chamado "0"
+            cap = cv2.VideoCapture(int(video_source) if video_source.isdigit() else video_source)
 
             # Configurar timeout para webcam
             if video_source.isdigit():
@@ -181,7 +197,8 @@ class AISecuritySystem:
                     cap.release()
                     import time
                     time.sleep(2)
-                    cap = cv2.VideoCapture(video_source)
+                    # Webcam precisa de índice inteiro; VideoCapture("0") tenta abrir um arquivo chamado "0"
+                    cap = cv2.VideoCapture(int(video_source) if video_source.isdigit() else video_source)
                     continue
 
                 frame_count += 1
@@ -201,7 +218,8 @@ class AISecuritySystem:
         # Permitir: caminhos locais, webcams (números), URLs HTTP/HTTPS
         if source.isdigit():  # Webcam
             return True
-        if source.startswith(('http://', 'https://')):
+        # rtsp:// é documentado no README, mas antes era sempre rejeitado
+        if source.startswith(('http://', 'https://', 'rtsp://', 'rtsps://')):
             # Bloquear IPs internos
             from urllib.parse import urlparse
             parsed = urlparse(source)
@@ -326,22 +344,29 @@ class AISecuritySystem:
         """Notificação multi-canal"""
         config = self.config_manager.config
 
-        # Notificação por email (placeholder)
+        sent = []
+
+        # Notificação por email: NÃO implementada (apenas registra no log)
         emails = config.get('notification_emails', [])
         if emails:
             self._send_email_notification(emails, incident_data)
 
         # Notificação por webhook
         webhook = config.get('notification_webhook')
-        if webhook:
-            self._send_webhook_notification(webhook, incident_data)
+        if webhook and self._send_webhook_notification(webhook, incident_data):
+            sent.append("webhook")
 
-        logging.info(f"Notificação de incidente {incident_data['id']} enviada")
+        # Antes registrava "enviada" sempre, mesmo sem nenhum canal funcionando
+        if sent:
+            logging.info(f"Notificação de incidente {incident_data['id']} enviada via {', '.join(sent)}")
+        else:
+            logging.warning(f"Incidente {incident_data['id']}: nenhuma notificação foi efetivamente enviada")
+        return sent
 
     def _send_email_notification(self, emails: List[str], incident_data: Dict):
         """Envia notificação por email"""
         # Implementação placeholder - integrar com SMTP ou SendGrid
-        logging.info(f"Email seria enviado para: {emails}")
+        logging.warning(f"Envio de email não implementado; {len(emails)} destinatário(s) NÃO notificados")
         # TODO: Implementar com smtplib ou API Externa
 
     def _send_webhook_notification(self, webhook: str, incident_data: Dict):
@@ -355,8 +380,10 @@ class AISecuritySystem:
             )
             response.raise_for_status()
             logging.info("Webhook enviado com sucesso")
+            return True
         except requests.RequestException as e:
             logging.error(f"Falha ao enviar webhook: {e}")
+            return False
 
     def _log_incident(self, incident_data: Dict):
         """Registo detalhado de incidentes"""
