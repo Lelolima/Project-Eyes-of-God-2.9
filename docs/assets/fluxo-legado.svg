@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 250" width="900" height="250" role="img" aria-labelledby="t d">
+  <title id="t">Fluxo de processamento da v2</title>
+  <desc id="d">Fonte de vídeo, leitura a cada 3 frames, detecção de rostos com Haar Cascade, regra de mais de 10 rostos ou modelo Keras opcional, incidente salvo como imagem e log JSON, notificação por webhook.</desc>
+  <style>
+    :root { --bg: #ffffff; --card: #f6f8fa; --fg: #1f2328; --muted: #57606a; --line: #d0d7de; --a: #0969da; --b: #1a7f37; --c: #9a6700; }
+    @media (prefers-color-scheme: dark) {
+      :root { --bg: #0d1117; --card: #161b22; --fg: #e6edf3; --muted: #9198a1; --line: #30363d; --a: #4493f8; --b: #3fb950; --c: #d29922; }
+    }
+    .bg { fill: var(--bg); stroke: var(--line); }
+    .box { fill: var(--card); stroke-width: 2; }
+    .a { stroke: var(--a); } .b { stroke: var(--b); } .c { stroke: var(--c); }
+    .h { fill: var(--fg); font: 700 14px system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+    .t { fill: var(--muted); font: 400 11.5px system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+    .flow { fill: none; stroke: var(--muted); stroke-width: 2.5; stroke-dasharray: 7 7; animation: flow 1.1s linear infinite; }
+    .tip { fill: var(--muted); }
+    @keyframes flow { to { stroke-dashoffset: -28; } }
+    @media (prefers-reduced-motion: reduce) { .flow { animation: none; } }
+  </style>
+  <rect class="bg" x="1" y="1" width="898" height="248" rx="14"/>
+
+  <rect class="box a" x="20" y="40" width="150" height="90" rx="8"/>
+  <text class="h" x="32" y="64">Fonte de vídeo</text>
+  <text class="t" x="32" y="84">webcam "0", arquivo,</text>
+  <text class="t" x="32" y="100">rtsp:// ou http(s)://</text>
+  <text class="t" x="32" y="116">IP privado: bloqueado</text>
+
+  <rect class="box a" x="200" y="40" width="150" height="90" rx="8"/>
+  <text class="h" x="212" y="64">Detecção de rostos</text>
+  <text class="t" x="212" y="84">Haar Cascade (OpenCV)</text>
+  <text class="t" x="212" y="100">1 a cada 3 frames</text>
+
+  <rect class="box c" x="380" y="40" width="160" height="90" rx="8"/>
+  <text class="h" x="392" y="64">Regra de suspeita</text>
+  <text class="t" x="392" y="84">mais de 10 rostos no frame</text>
+  <text class="t" x="392" y="100">ou modelo Keras opcional</text>
+  <text class="t" x="392" y="116">(models/*.h5, não incluso)</text>
+
+  <rect class="box b" x="570" y="40" width="150" height="90" rx="8"/>
+  <text class="h" x="582" y="64">Incidente</text>
+  <text class="t" x="582" y="84">imagem JPEG +</text>
+  <text class="t" x="582" y="100">log JSON diário</text>
+  <text class="t" x="582" y="116">hash das coordenadas</text>
+
+  <rect class="box b" x="750" y="40" width="130" height="90" rx="8"/>
+  <text class="h" x="762" y="64">Notificação</text>
+  <text class="t" x="762" y="84">webhook (real)</text>
+  <text class="t" x="762" y="100">e-mail: não</text>
+  <text class="t" x="762" y="116">implementado</text>
+
+  <path class="flow" d="M170 85 L200 85"/><polygon class="tip" points="193,80 193,90 201,85"/>
+  <path class="flow" d="M350 85 L380 85"/><polygon class="tip" points="373,80 373,90 381,85"/>
+  <path class="flow" d="M540 85 L570 85"/><polygon class="tip" points="563,80 563,90 571,85"/>
+  <path class="flow" d="M720 85 L750 85"/><polygon class="tip" points="743,80 743,90 751,85"/>
+
+  <text class="t" x="20" y="175">Sem banco de dados, sem API e sem painel web. Incidentes antigos são apagados após incident_retention_days (padrão 30).</text>
+  <text class="t" x="20" y="200">Para analítica de zonas/contagem, revisão humana, login e cadeia de custódia, use a v3 (repositório O-olho-de-DEUS).</text>
+</svg>

@@ -1,350 +1,93 @@
-# 👁️ O-olho-de-DEUS
+<p align="center">
+  <img src="docs/assets/banner-legado.svg" alt="O-olho-de-DEUS v2 — versão legada. Versão mantida: Lelolima/O-olho-de-DEUS (v3)" width="900">
+</p>
 
-Sistema de Segurança e Monitoramento com Inteligência Artificial.
+> **Esta é a versão 2, legada.** Ela é mantida funcionando, mas não recebe novos recursos.
+> A versão atual (v3) está em **[Lelolima/O-olho-de-DEUS](https://github.com/Lelolima/O-olho-de-DEUS)**:
+> analítica de intrusão em zona, contagem de pessoas, objeto abandonado, API com login seguro,
+> revisão humana, cadeia de custódia e exemplos executáveis.
+> Este repositório é idêntico ao diretório `LEGADO_v2.0.0/` de lá, com as correções de manutenção abaixo.
 
-> **Demonstração Interativa:** As animações SVG abaixo demonstram a interface e o fluxo de funcionamento do sistema em tempo real.
+## O que é
 
----
+Um script único (`src/security_system.py`) que lê uma ou mais fontes de vídeo, detecta rostos
+com o Haar Cascade do OpenCV e registra um **incidente** (imagem JPEG + log JSON) quando há
+**mais de 10 rostos** no quadro, ou quando um modelo Keras opcional
+(`models/behavior_detection_model.h5`, não incluído) passa do limiar. Incidentes podem ser
+enviados a um **webhook**. Não identifica pessoas, não tem banco de dados, API nem painel web.
 
-## 🎬 Demos Visuais
+<p align="center">
+  <img src="docs/assets/fluxo-legado.svg" alt="Fluxo: fonte de vídeo → Haar → regra de suspeita → incidente → webhook" width="900">
+</p>
 
-### 📊 Dashboard Principal
+## Instalação e uso
 
-<details>
-<summary><b>🖱️ Clique para ver a animação do Dashboard</b></summary>
-<br>
-
-![Dashboard do Sistema](assets/interface-dashboard.svg)
-
-**O que você está vendo:**
-- 🔵 **Varredura em tempo real** - A linha ciano scanning representa o processamento contínuo de vídeo
-- 🟢 **Detecção facial** - Caixas azuis ao redor dos rostos detectados (Haar Cascade)
-- 📈 **Estatísticas live** - CPU, FPS, câmeras ativas atualizadas em tempo real
-- 📋 **Log de atividades** - Scroll automático de eventos do sistema
-- ⭕ **Loading indicator** - Processamento em background (canto inferior direito)
-</details>
-
----
-
-### 🔄 Fluxo de Detecção
-
-<details>
-<summary><b>🖱️ Clique para ver a animação do Fluxo</b></summary>
-<br>
-
-![Fluxo de Detecção](assets/fluxo-deteccao.svg)
-
-**Pipeline de processamento:**
-1. **📹 Captura** - Múltiplas fontes de vídeo (IP, USB, RTSP, HTTP)
-2. **⚙️ Pre-Process** - Conversão para grayscale, redimensionamento
-3. **🔍 Face Detect** - OpenCV Haar Cascades identifica rostos
-4. **🧠 Análise IA** - TensorFlow ML para comportamento suspeito
-5. **⚖️ Decisão** - Threshold configurável determina alerta
-
-**Caminhos de saída:**
-- ✅ **Normal** - Continua monitorando (verde)
-- 🚨 **Alerta** - Notifica autoridades (vermelho pulsante)
-
-**Métricas de performance:**
-- Processamento: ~33ms/frame
-- FPS: 28-30 (tempo real)
-- Precisão: 95%+ 
-- Câmeras simultâneas: 4-8 threads
-- Uso CPU: ~45% (i7 moderno)
-</details>
-
----
-
-### 🚨 Sistema de Alertas
-
-<details>
-<summary><b>🖱️ Clique para ver a animação de Alerta</b></summary>
-<br>
-
-![Alerta de Segurança](assets/alerta-seguranca.svg)
-
-**Quando um alerta é disparado:**
-- 🚨 **Sirenes visuais** - Animação de rotação + piscar
-- 🔴 **Flash vermelho** - Toda a interface pulsa em alerta
-- 📸 **Auto-capture** - Foto do incidente salva automaticamente
-- 📧 **Notificações** - Email + webhook enviados
-- 📊 **Nível de ameaça** - Barra indicadora (BAIXO/MÉDIO/ALTO/CRÍTICO)
-- ⚡ **Ações rápidas** - Botões para chamar polícia, ver câmera, ver logs
-
-**Dados do incidente registrados:**
-- ID único (UUID)
-- Timestamp ISO 8601
-- Câmera de origem
-- Número de pessoas detectadas
-- Hash criptografado dos dados faciais
-</details>
-
----
-
-### 🏗️ Arquitetura do Sistema
-
-<details>
-<summary><b>🖱️ Clique para ver a animação da Arquitetura</b></summary>
-<br>
-
-![Arquitetura](assets/arquitetura-sistema.svg)
-
-**Camadas do sistema:**
-
-| Camada | Componentes | Tecnologias |
-|--------|-------------|-------------|
-| **Entrada** | Câmeras IP, USB, RTSP, HTTP | OpenCV VideoCapture |
-| **Processamento** | AI Engine, Thread Pool | TensorFlow, ThreadPoolExecutor |
-| **Saída** | Dashboard, Alertas, Logs, DB | SMTP, Webhooks, JSON |
-
-**Stack tecnológico:**
-- 🐍 Python 3.9+
-- 📷 OpenCV (detecção facial)
-- 🧠 TensorFlow 2.13+ (ML behavior)
-- 🔢 NumPy (processamento numérico)
-- 🌐 Requests (webhooks/notifications)
-- 🧵 ThreadPoolExecutor (concorrência)
-
-**Recursos de segurança:**
-- ✅ Hash SHA-256 com salt para dados faciais
-- ✅ Validação anti-SSRF para URLs de vídeo
-- ✅ Logs auditáveis com rotação (10MB, 5 backups)
-- ✅ Limpeza automática de incidentes antigos
-- ⚠️ LGPD Compliance - anonimização de dados
-
-**Performance em tempo real:**
-- CPU: ~45%
-- RAM: ~62%
-- FPS: 28-30
-- Latência: ~33ms
-- Threads: 4 ativas
-- Câmeras: 4/8 máx
-</details>
-
----
-
-## ⚠️ Aviso Legal Importante
-
-Este software é **apenas para fins educacionais e de pesquisa**. O uso em ambientes reais requer:
-
-- Aprovação legal conforme LGPD (Lei Geral de Proteção de Dados)
-- Consentimento explícito das pessoas monitoradas
-- Compliance com leis locais de privacidade e vigilância
-- Revisão jurídica antes de qualquer implantação
-
----
-
-## 🚀 Funcionalidades
-
-| Funcionalidade | Descrição | Status |
-|---------------|-----------|--------|
-| Detecção Facial | OpenCV Haar Cascades | ✅ Produção |
-| Múltiplas Câmeras | Thread Pool (4-8 streams) | ✅ Produção |
-| Análise Comportamental | TensorFlow ML | ⚠️ Requer modelo |
-| Alertas Automáticos | Email + Webhook | ✅ Produção |
-| Logs Auditáveis | SHA-256 hash + JSON | ✅ Produção |
-| Dashboard Real-time | SVG/HTML interface | 🚧 Em desenvolvimento |
-| Reconhecimento Facial | Identificação por nome | 🚧 Futuro |
-
----
-
-## 📦 Instalação
-
-### 🎯 Instalação Rápida (Windows)
-
-1. **Baixe o projeto**
-```powershell
-git clone https://github.com/Lelolima/Project-Eyes-of-God-2.9.git
-cd Project-Eyes-of-God-2.9
-```
-
-2. **Execute o instalador**
-```powershell
-.\instalar.bat
-```
-
-3. **Valide a instalação**
-```powershell
-.\validar.bat
-```
-
-### 🐧 Instalação Manual (Linux/Mac)
+Python 3.10–3.12.
 
 ```bash
-# 1. Clone o repositório
 git clone https://github.com/Lelolima/Project-Eyes-of-God-2.9.git
 cd Project-Eyes-of-God-2.9
-
-# 2. Crie ambiente virtual (recomendado)
-python3 -m venv venv
-source venv/bin/activate  # Linux/Mac
-# ou
-venv\Scripts\activate  # Windows
-
-# 3. Instale dependências
-pip install -r requirements.txt
-
-# 4. Configure (opcional)
-cp config.json config.local.json
-# Edite config.local.json conforme necessário
-
-# 5. Execute
-python src/security_system.py
+python -m venv .venv && source .venv/bin/activate     # Windows: .venv\Scripts\activate
+pip install -r requirements.txt                       # OpenCV (<5), numpy, requests
+python src/security_system.py --config config.json
 ```
 
----
+No Windows, `instalar.bat` faz o `pip install` e `validar.bat` confere a instalação.
 
-## ⚙️ Configuração
-
-Edite `config.json`:
+O `config.json` define as fontes e os parâmetros:
 
 ```json
 {
-  "security_level": "medium",
-  "video_sources": [
-    "0",
-    "rtsp://192.168.1.100:554/stream",
-    "http://camera-ip/mjpeg"
-  ],
-  "notification_emails": ["seguranca@empresa.com"],
-  "notification_webhook": "https://hooks.slack.com/...",
-  "log_level": "INFO",
+  "video_sources": ["0", "gravacao.mp4", "rtsp://camera.exemplo.com/stream"],
+  "notification_webhook": "https://hooks.exemplo.com/incidentes",
   "confidence_threshold": 0.7,
   "incident_retention_days": 30
 }
 ```
 
-### Fontes de Vídeo Suportadas
+<details>
+<summary><b>Detalhes de comportamento</b></summary>
 
-| Tipo | Exemplo | Descrição |
-|------|---------|-----------|
-| Webcam | `"0"` | Câmera USB padrão |
-| Múltiplas Webcams | `"0", "1", "2"` | Índices diferentes |
-| Arquivo de vídeo | `"video.mp4"` | Playback de arquivo |
-| Câmera IP (RTSP) | `"rtsp://user:pass@ip:554/stream"` | Stream RTSP |
-| Câmera HTTP | `"http://ip/mjpeg"` | MJPEG sobre HTTP |
+- **Fontes:** índice de webcam (`"0"`), arquivo local, `http(s)://` ou `rtsp://`. Arquivos são
+  processados até o fim e o programa encerra. Câmeras reconectam a cada 2 s.
+- **Anti-SSRF:** URLs com IP privado (ex.: `192.168.x.x`) são recusadas, exceto
+  `localhost`/`127.0.0.1`. Câmeras na rede local precisam de hostname.
+- **Saídas:** `incidents/images/<id>.jpg`, `logs/incidents/AAAA-MM-DD.json` e
+  `logs/security_system.log` (rotação de 10 MB).
+- **Retenção:** imagens de incidentes com mais de `incident_retention_days` dias são apagadas ao
+  encerrar o programa.
+- **Variável opcional:** `SECURITY_HASH_SALT` substitui o salt padrão do hash das coordenadas
+  dos rostos (o padrão é público no código).
+- **Modelo comportamental:** só se `models/behavior_detection_model.h5` existir e o TensorFlow
+  estiver instalado (`pip install -r requirements-ml.txt`).
+- **Códigos de saída:** `0` ok, `2` nenhuma fonte configurada.
+</details>
 
----
-
-## 🧪 Testes
-
-```bash
-# Executar testes unitários
-python -m pytest tests/ -v
-
-# Executar validação de instalação
-python tests/validate_install.py
-
-# Verificar sintaxe
-python -m py_compile src/security_system.py
-```
-
-### Cobertura de Testes
-
-| Módulo | Testes | Cobertura |
-|--------|--------|-----------|
-| ConfigManager | 3 | ✅ 100% |
-| SecureDataHandler | 4 | ✅ 100% |
-| AISecuritySystem | 6 | ✅ 85% |
-| Integration | 1 | ✅ 100% |
-
----
-
-## 🛠️ Troubleshooting
-
-### ❌ "Modelo facial não carregado"
+## Testes
 
 ```bash
-# Verifique se OpenCV está instalado
-python -c "import cv2; print(cv2.__version__)"
-
-# Se necessário, reinstale
-pip uninstall opencv-python
-pip install opencv-python
+pip install -r requirements-dev.txt
+python -m pytest -q --cov=src          # 27 testes, 83% de cobertura (mínimo de 75% no CI)
+ruff check . && ruff format --check .
 ```
 
-### ❌ "Nenhuma fonte de vídeo configurada"
+Os testes usam vídeos sintéticos gravados em disco e não precisam de câmera nem de TensorFlow.
+O CI roda lint, formatação, compilação e testes.
 
-Edite `config.json` e adicione fontes em `video_sources`:
+## Limitações
 
-```json
-{
-  "video_sources": ["0"]
-}
-```
+- A única regra sem modelo é "mais de 10 rostos". O Haar perde rostos pequenos ou de perfil.
+- **E-mail não é enviado** (só registra um aviso); o webhook funciona.
+- As imagens de incidente **não** têm rostos borrados. Para minimização de dados (LGPD), use a v3.
+- Benchmarks de FPS e precisão de versões anteriores deste README nunca foram medidos e foram removidos.
 
-### ❌ Erros de permissão
+## Privacidade (LGPD)
 
-```bash
-# Crie as pastas manualmente
-mkdir incidents logs models
+Imagens de pessoas são dados pessoais. Sinalize as áreas monitoradas, restrinja o acesso às
+pastas `incidents/` e `logs/`, defina `incident_retention_days` de acordo com a sua política e
+mantenha um canal para os titulares. A v3 oferece borramento de rostos, login com hash e
+registro auditável de decisões.
 
-# Ou use o script
-python src/security_system.py  # Cria automaticamente
-```
+## Licença
 
-### ❌ "TensorFlow não encontrado"
-
-```bash
-# Instale TensorFlow
-pip install tensorflow
-
-# Ou CPU-only (mais leve)
-pip install tensorflow-cpu
-```
-
----
-
-## 📊 Benchmarks
-
-| Hardware | FPS | CPU | RAM | Câmeras |
-|----------|-----|-----|-----|---------|
-| Intel i7-10700K | 30 | 45% | 2.1GB | 4 |
-| Intel i5-9600K | 24 | 62% | 1.8GB | 3 |
-| AMD Ryzen 7 5800X | 32 | 38% | 2.3GB | 4 |
-| Raspberry Pi 4 | 8 | 95% | 1.2GB | 1 |
-
----
-
-## 📝 LICENSE
-
-MIT License - Verifique leis locais antes de usar.
-
-Este software é fornecido "como está" sem garantias de qualquer tipo, expressas ou implícitas.
-
----
-
-## 🤝 Contribuições
-
-Contribuições são bem-vindas! Por favor:
-
-1. Fork o projeto
-2. Crie uma branch (`git checkout -b feature/AmazingFeature`)
-3. Commit (`git commit -m 'Add AmazingFeature'`)
-4. Push (`git push origin feature/AmazingFeature`)
-5. Pull Request
-
-### 📋 Guidelines de Contribuição
-
-- Siga o estilo de código existente (PEP 8)
-- Adicione testes para novas funcionalidades
-- Atualize a documentação conforme necessário
-- Use type hints em funções públicas
-
----
-
-## 📧 Contato
-
-**Desenvolvido por:** @Lelolima
-
-**Repositório:** [github.com/Lelolima/Project-Eyes-of-God-2.9](https://github.com/Lelolima/Project-Eyes-of-God-2.9)
-
----
-
-<div align="center">
-
-**O-olho-de-DEUS v2.0** • 2026
-
-*👁️ Tudo vê. Tudo registra. Tudo protege.*
-
-</div>
+MIT. Desenvolvido por Wellington de Lima Catarina — lelolima806@gmail.com.

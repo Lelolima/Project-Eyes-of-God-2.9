@@ -6,39 +6,46 @@ Sistema avançado de monitoramento e detecção facial
 
 import cv2
 import numpy as np
-import tensorflow as tf
-from tensorflow.keras.models import load_model
-from tensorflow.keras.preprocessing import image
-from concurrent.futures import ThreadPoolExecutor
+
+# TensorFlow é opcional: só é necessário quando existe models/behavior_detection_model.h5.
+# (Antes era importado no topo, tornando o TF ~500 MB obrigatório até para os testes.)
+try:
+    from tensorflow.keras.models import load_model
+    from tensorflow.keras.preprocessing import image
+except ImportError:  # pragma: no cover - depende do ambiente
+    load_model = None
+    image = None
+import hashlib
+import json
 import logging
 import os
-import json
-from datetime import datetime
+import sys
 import uuid
-import hashlib
-import requests
+from concurrent.futures import ThreadPoolExecutor
+from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+
+import requests
 
 
 class ConfigManager:
     """Gerenciamento centralizado de configurações"""
 
-    def __init__(self, config_path: str = 'config.json'):
+    def __init__(self, config_path: str = "config.json"):
         self.config_path = Path(config_path)
         self.config = self.load_config()
 
-    def load_config(self) -> Dict:
+    def load_config(self) -> dict:
         """Carrega configuração do arquivo ou usa defaults"""
         if self.config_path.exists():
             try:
-                with open(self.config_path, 'r', encoding='utf-8') as f:
+                with open(self.config_path, encoding="utf-8") as f:
                     return json.load(f)
             except json.JSONDecodeError as e:
                 logging.warning(f"Erro ao parsear config: {e}. Usando defaults.")
         return self._default_config()
 
-    def _default_config(self) -> Dict:
+    def _default_config(self) -> dict:
         return {
             "security_level": "medium",
             "video_sources": [],
@@ -46,12 +53,12 @@ class ConfigManager:
             "notification_webhook": None,
             "log_level": "INFO",
             "confidence_threshold": 0.7,
-            "incident_retention_days": 30
+            "incident_retention_days": 30,
         }
 
     def save_config(self):
         """Salva configurações atuais"""
-        with open(self.config_path, 'w', encoding='utf-8') as f:
+        with open(self.config_path, "w", encoding="utf-8") as f:
             json.dump(self.config, f, indent=2, ensure_ascii=False)
 
 
@@ -59,19 +66,23 @@ class SecureDataHandler:
     """Tratamento seguro de dados sensíveis"""
 
     @staticmethod
-    def hash_sensitive_data(data: str, salt: str = "olho-de-deus-salt-2026") -> str:
-        """Hash de dados sensíveis com salt"""
+    def hash_sensitive_data(data: str, salt: str | None = None) -> str:
+        """Hash de dados sensíveis com salt.
+
+        O salt pode ser definido em SECURITY_HASH_SALT; sem ela usa o valor
+        histórico (público no código) para manter compatibilidade dos hashes.
+        """
+        if salt is None:
+            salt = os.environ.get("SECURITY_HASH_SALT", "olho-de-deus-salt-2026")
         salted = f"{salt}{data}"
         return hashlib.sha256(salted.encode()).hexdigest()
 
     @staticmethod
-    def anonymize_face_data(face_data: Dict) -> Dict:
+    def anonymize_face_data(face_data: dict) -> dict:
         """Anonimiza dados faciais para logging"""
         return {
-            "face_hash": SecureDataHandler.hash_sensitive_data(
-                json.dumps(face_data, sort_keys=True)
-            ),
-            "timestamp": datetime.now().isoformat()
+            "face_hash": SecureDataHandler.hash_sensitive_data(json.dumps(face_data, sort_keys=True)),
+            "timestamp": datetime.now().isoformat(),
         }
 
 
@@ -99,10 +110,7 @@ class AISecuritySystem:
         """Configura sistema de logging com rotação"""
         from logging.handlers import RotatingFileHandler
 
-        log_level = getattr(
-            logging,
-            self.config_manager.config.get('log_level', 'INFO').upper()
-        )
+        log_level = getattr(logging, self.config_manager.config.get("log_level", "INFO").upper())
 
         logger = logging.getLogger()
         logger.setLevel(log_level)
@@ -111,8 +119,8 @@ class AISecuritySystem:
         # Handler para arquivo com rotação
         file_handler = RotatingFileHandler(
             self.logs_dir / "security_system.log",
-            maxBytes=10*1024*1024,  # 10MB
-            backupCount=5
+            maxBytes=10 * 1024 * 1024,  # 10MB
+            backupCount=5,
         )
         file_handler.setLevel(log_level)
 
@@ -120,9 +128,7 @@ class AISecuritySystem:
         console_handler = logging.StreamHandler()
         console_handler.setLevel(log_level)
 
-        formatter = logging.Formatter(
-            '%(asctime)s - %(levelname)s: %(message)s'
-        )
+        formatter = logging.Formatter("%(asctime)s - %(levelname)s: %(message)s")
         file_handler.setFormatter(formatter)
         console_handler.setFormatter(formatter)
 
@@ -133,20 +139,26 @@ class AISecuritySystem:
         """Carrega modelos de ML com fallback seguro"""
         try:
             # Haar Cascade para detección facial
-            cascade_path = cv2.data.haarcascades + 'haarcascade_frontalface_default.xml'
+            cascade_path = cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
             self.face_detection_model = cv2.CascadeClassifier(cascade_path)
             logging.info("Modelo de deteção facial carregado")
-        except Exception as e:
+        except (cv2.error, AttributeError) as e:
             logging.error(f"Erro ao carregar modelo facial: {e}")
             self.face_detection_model = None
 
         # Modelo de comportamento (opcional)
         behavior_model_path = Path("models/behavior_detection_model.h5")
-        if behavior_model_path.exists():
+        if behavior_model_path.exists() and load_model is None:
+            logging.warning(
+                "Modelo comportamental encontrado, mas TensorFlow não está instalado "
+                "(pip install -r requirements-ml.txt) - usando modo básico"
+            )
+            self.behavior_model = None
+        elif behavior_model_path.exists():
             try:
                 self.behavior_model = load_model(behavior_model_path)
                 logging.info("Modelo comportamental carregado")
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 - modelo Keras opcional; qualquer falha volta ao modo básico
                 logging.warning(f"Não foi possível carregar modelo comportamental: {e}")
                 self.behavior_model = None
         else:
@@ -163,12 +175,14 @@ class AISecuritySystem:
                 return
 
             logging.info(f"Iniciando processamento: {video_source}")
-            cap = cv2.VideoCapture(video_source)
+            # Webcam precisa de índice inteiro; VideoCapture("0") tenta abrir um arquivo chamado "0"
+            cap = cv2.VideoCapture(int(video_source) if video_source.isdigit() else video_source)
 
             # Configurar timeout para webcam
             if video_source.isdigit():
                 cap.set(cv2.CAP_PROP_FPS, 30)
 
+            is_file = Path(video_source).is_file()
             frame_count = 0
             while True:
                 if stop_event and stop_event.is_set():
@@ -177,11 +191,17 @@ class AISecuritySystem:
 
                 ret, frame = cap.read()
                 if not ret:
-                    logging.warning(f"Frame não capturado, tentando reconectar...")
+                    if is_file:
+                        # Antes reabria o arquivo do início para sempre
+                        logging.info(f"Fim do arquivo de vídeo: {video_source} ({frame_count} frames)")
+                        break
+                    logging.warning("Frame não capturado, tentando reconectar...")
                     cap.release()
                     import time
+
                     time.sleep(2)
-                    cap = cv2.VideoCapture(video_source)
+                    # Webcam precisa de índice inteiro; VideoCapture("0") tenta abrir um arquivo chamado "0"
+                    cap = cv2.VideoCapture(int(video_source) if video_source.isdigit() else video_source)
                     continue
 
                 frame_count += 1
@@ -189,8 +209,8 @@ class AISecuritySystem:
                 if frame_count % 3 == 0:
                     self._analyze_frame(frame, video_source)
 
-        except Exception as e:
-            logging.error(f"Erro no processamento do stream {video_source}: {e}")
+        except Exception:
+            logging.exception(f"Erro no processamento do stream {video_source}")
         finally:
             if cap:
                 cap.release()
@@ -201,16 +221,19 @@ class AISecuritySystem:
         # Permitir: caminhos locais, webcams (números), URLs HTTP/HTTPS
         if source.isdigit():  # Webcam
             return True
-        if source.startswith(('http://', 'https://')):
+        # rtsp:// é documentado no README, mas antes era sempre rejeitado
+        if source.startswith(("http://", "https://", "rtsp://", "rtsps://")):
             # Bloquear IPs internos
             from urllib.parse import urlparse
+
             parsed = urlparse(source)
             hostname = parsed.hostname
-            if hostname in ('localhost', '127.0.0.1'):
+            if hostname in ("localhost", "127.0.0.1"):
                 return True
             # Bloquear IPs privados
             if hostname:
                 import ipaddress
+
                 try:
                     ip = ipaddress.ip_address(hostname)
                     if ip.is_private or ip.is_loopback:
@@ -233,7 +256,7 @@ class AISecuritySystem:
         elif len(faces) > 0:
             logging.debug(f"{len(faces)} rosto(s) detectado(s) em {source}")
 
-    def _detect_faces(self, frame: np.ndarray) -> List[Tuple[int, int, int, int]]:
+    def _detect_faces(self, frame: np.ndarray) -> list[tuple[int, int, int, int]]:
         """Detecção de rostos"""
         if self.face_detection_model is None:
             logging.warning("Modelo facial não carregado")
@@ -241,19 +264,11 @@ class AISecuritySystem:
 
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         faces = self.face_detection_model.detectMultiScale(
-            gray,
-            scaleFactor=1.1,
-            minNeighbors=5,
-            minSize=(30, 30),
-            flags=cv2.CASCADE_SCALE_IMAGE
+            gray, scaleFactor=1.1, minNeighbors=5, minSize=(30, 30), flags=cv2.CASCADE_SCALE_IMAGE
         )
         return faces
 
-    def _is_suspicious_behavior(
-        self,
-        frame: np.ndarray,
-        faces: List[Tuple[int, int, int, int]]
-    ) -> bool:
+    def _is_suspicious_behavior(self, frame: np.ndarray, faces: list[tuple[int, int, int, int]]) -> bool:
         """
         Detecção de comportamento suspeito.
         Implementação básica: muitos rostos ou movimento rápido.
@@ -268,44 +283,30 @@ class AISecuritySystem:
             try:
                 # Preprocessar frame para o modelo
                 img = image.array_to_img(frame)
-                img_resized = image.img_to_array(
-                    img.resize((224, 224))
-                )
+                img_resized = image.img_to_array(img.resize((224, 224)))
                 img_resized = np.expand_dims(img_resized, axis=0) / 255.0
 
                 prediction = self.behavior_model.predict(img_resized, verbose=0)
-                threshold = self.config_manager.config.get('confidence_threshold', 0.7)
+                threshold = self.config_manager.config.get("confidence_threshold", 0.7)
 
                 if prediction[0][0] > threshold:
                     return True
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 - falha do modelo opcional não interrompe a análise
                 logging.warning(f"Erro na predição comportamental: {e}")
 
         return False
 
-    def _trigger_security_protocol(
-        self,
-        frame: np.ndarray,
-        faces: List[Tuple[int, int, int, int]],
-        source: str
-    ):
+    def _trigger_security_protocol(self, frame: np.ndarray, faces: list[tuple[int, int, int, int]], source: str):
         """Protocolo de segurança para incidentes"""
         incident_id = str(uuid.uuid4())
         timestamp = datetime.now().isoformat()
 
         # Salvar imagem (comprimida)
         incident_image_path = self.incidents_dir / "images" / f"{incident_id}.jpg"
-        cv2.imwrite(
-            str(incident_image_path),
-            frame,
-            [cv2.IMWRITE_JPEG_QUALITY, 85]
-        )
+        cv2.imwrite(str(incident_image_path), frame, [cv2.IMWRITE_JPEG_QUALITY, 85])
 
         # Hash dos dados faciais
-        face_hashes = [
-            SecureDataHandler.hash_sensitive_data(f"{x}{y}{w}{h}")
-            for (x, y, w, h) in faces
-        ]
+        face_hashes = [SecureDataHandler.hash_sensitive_data(f"{x}{y}{w}{h}") for (x, y, w, h) in faces]
 
         # Dados do incidente
         incident_data = {
@@ -315,50 +316,56 @@ class AISecuritySystem:
             "faces_detected": len(faces),
             "faces_hash": face_hashes,
             "image_path": str(incident_image_path),
-            "created_by": "olho-de-deus-system"
+            "created_by": "olho-de-deus-system",
         }
 
         # Notificar e registrar
         self._notify_authorities(incident_data)
         self._log_incident(incident_data)
 
-    def _notify_authorities(self, incident_data: Dict):
+    def _notify_authorities(self, incident_data: dict):
         """Notificação multi-canal"""
         config = self.config_manager.config
 
-        # Notificação por email (placeholder)
-        emails = config.get('notification_emails', [])
+        sent = []
+
+        # Notificação por email: NÃO implementada (apenas registra no log)
+        emails = config.get("notification_emails", [])
         if emails:
             self._send_email_notification(emails, incident_data)
 
         # Notificação por webhook
-        webhook = config.get('notification_webhook')
-        if webhook:
-            self._send_webhook_notification(webhook, incident_data)
+        webhook = config.get("notification_webhook")
+        if webhook and self._send_webhook_notification(webhook, incident_data):
+            sent.append("webhook")
 
-        logging.info(f"Notificação de incidente {incident_data['id']} enviada")
+        # Antes registrava "enviada" sempre, mesmo sem nenhum canal funcionando
+        if sent:
+            logging.info(f"Notificação de incidente {incident_data['id']} enviada via {', '.join(sent)}")
+        else:
+            logging.warning(f"Incidente {incident_data['id']}: nenhuma notificação foi efetivamente enviada")
+        return sent
 
-    def _send_email_notification(self, emails: List[str], incident_data: Dict):
+    def _send_email_notification(self, emails: list[str], incident_data: dict):
         """Envia notificação por email"""
         # Implementação placeholder - integrar com SMTP ou SendGrid
-        logging.info(f"Email seria enviado para: {emails}")
+        logging.warning(f"Envio de email não implementado; {len(emails)} destinatário(s) NÃO notificados")
         # TODO: Implementar com smtplib ou API Externa
 
-    def _send_webhook_notification(self, webhook: str, incident_data: Dict):
+    def _send_webhook_notification(self, webhook: str, incident_data: dict):
         """Envia notificação por webhook"""
         try:
             response = requests.post(
-                webhook,
-                json=incident_data,
-                timeout=10,
-                headers={'Content-Type': 'application/json'}
+                webhook, json=incident_data, timeout=10, headers={"Content-Type": "application/json"}
             )
             response.raise_for_status()
             logging.info("Webhook enviado com sucesso")
+            return True
         except requests.RequestException as e:
             logging.error(f"Falha ao enviar webhook: {e}")
+            return False
 
-    def _log_incident(self, incident_data: Dict):
+    def _log_incident(self, incident_data: dict):
         """Registo detalhado de incidentes"""
         # Remover dados sensíveis antes de logar
         log_data = {
@@ -376,17 +383,17 @@ class AISecuritySystem:
 
         incidents = []
         if log_file.exists():
-            with open(log_file, 'r') as f:
+            with open(log_file) as f:
                 incidents = json.load(f)
 
         incidents.append(log_data)
-        with open(log_file, 'w') as f:
+        with open(log_file, "w") as f:
             json.dump(incidents, f, indent=2)
 
-    def cleanup_old_incidents(self, retention_days: int = None):
+    def cleanup_old_incidents(self, retention_days: int | None = None) -> int:
         """Limpa incidentes antigos"""
         if retention_days is None:
-            retention_days = self.config_manager.config.get('incident_retention_days', 30)
+            retention_days = self.config_manager.config.get("incident_retention_days", 30)
 
         cutoff = datetime.now().timestamp() - (retention_days * 86400)
         cleaned = 0
@@ -397,49 +404,56 @@ class AISecuritySystem:
                 cleaned += 1
 
         logging.info(f"{cleaned} incidentes antigos removidos")
+        return cleaned
 
 
-def main():
+def main(argv: list[str] | None = None) -> int:
     """Ponto de entrada principal"""
+    import argparse
+
+    parser = argparse.ArgumentParser(description="O-olho-de-DEUS v2 (legado)")
+    parser.add_argument("--config", default="config.json", help="arquivo de configuração JSON")
+    args = parser.parse_args(argv)
     print("=" * 60)
     print("O-OLHO-DE-DEUS: Sistema de Segurança com IA")
     print("=" * 60)
 
     # Carregar configuração
-    config_manager = ConfigManager('config.json')
+    config_manager = ConfigManager(args.config)
 
     # Inicializar sistema
     security_system = AISecuritySystem(config_manager)
 
     # Obter fontes de vídeo
-    video_sources = config_manager.config.get('video_sources', [])
+    video_sources = config_manager.config.get("video_sources", [])
 
     if not video_sources:
-        print("\n⚠️  Nenhuma fonte de vídeo configurada!")
+        print("\n[AVISO] Nenhuma fonte de vídeo configurada!")
         print("Edite config.json e adicione fontes em 'video_sources'")
         print("\nExemplos:")
         print('  "video_sources": ["0"]  # Webcam')
         print('  "video_sources": ["rtsp://camera-ip/stream"]  # IP Camera')
         print('  "video_sources": ["video.mp4"]  # Arquivo')
-        return
+        return 2
 
-    print(f"\n📹 Fontes configuradas: {len(video_sources)}")
+    print(f"\n[INFO] Fontes configuradas: {len(video_sources)}")
     for i, source in enumerate(video_sources, 1):
         print(f"   {i}. {source}")
 
-    print("\n🚀 Iniciando monitoramento... (Ctrl+C para parar)")
+    print("\n[INFO] Iniciando monitoramento... (Ctrl+C para parar)")
 
     # Processamento paralelo
     try:
         with ThreadPoolExecutor(max_workers=min(4, len(video_sources))) as executor:
             executor.map(security_system.process_video_stream, video_sources)
     except KeyboardInterrupt:
-        print("\n\n🛑 Parando sistema...")
+        print("\n\n[INFO] Parando sistema...")
     finally:
         # Cleanup
         security_system.cleanup_old_incidents()
-        print("✅ Sistema finalizado")
+        print("[OK] Sistema finalizado")
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
