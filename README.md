@@ -2,6 +2,8 @@
 
 Sistema de Segurança e Monitoramento com Inteligência Artificial.
 
+> ℹ️ Este repositório é idêntico (byte a byte) ao diretório `LEGADO_v2.0.0/` de [O-olho-de-DEUS](https://github.com/Lelolima/O-olho-de-DEUS), onde está a versão 3.
+
 > **Demonstração Interativa:** As animações SVG abaixo demonstram a interface e o fluxo de funcionamento do sistema em tempo real.
 
 ---
@@ -182,7 +184,8 @@ source venv/bin/activate  # Linux/Mac
 venv\Scripts\activate  # Windows
 
 # 3. Instale dependências
-pip install -r requirements.txt
+pip install -r requirements.txt        # OpenCV (<5), numpy, requests
+pip install -r requirements-ml.txt     # opcional: TensorFlow, só se houver models/behavior_detection_model.h5
 
 # 4. Configure (opcional)
 cp config.json config.local.json
@@ -239,14 +242,16 @@ python tests/validate_install.py
 python -m py_compile src/security_system.py
 ```
 
-### Cobertura de Testes
+Os testes usam frames sintéticos e mocks de câmera/webhook; não exigem câmera nem TensorFlow.
+O CI (`.github/workflows/ci.yml`) roda ruff, compilação e pytest.
 
-| Módulo | Testes | Cobertura |
-|--------|--------|-----------|
-| ConfigManager | 3 | ✅ 100% |
-| SecureDataHandler | 4 | ✅ 100% |
-| AISecuritySystem | 6 | ✅ 85% |
-| Integration | 1 | ✅ 100% |
+### Limitações conhecidas (auditoria 2026-11-22)
+
+- **Email não é enviado** (não implementado): o sistema registra um aviso no log. Só o webhook notifica de fato.
+- A detecção "suspeita" sem modelo comportamental é apenas `> 10 rostos` no quadro (Haar Cascade).
+- Fontes HTTP/RTSP com IP privado (ex.: `192.168.x.x`) são **bloqueadas** pela proteção anti-SSRF,
+  exceto `localhost`/`127.0.0.1`. Câmeras de rede local precisam de hostname ou ajuste dessa regra.
+- `SECURITY_HASH_SALT` (variável de ambiente) substitui o salt padrão, que é público no código.
 
 ---
 
@@ -260,7 +265,7 @@ python -c "import cv2; print(cv2.__version__)"
 
 # Se necessário, reinstale
 pip uninstall opencv-python
-pip install opencv-python
+pip install "opencv-python>=4.8,<5"   # OpenCV 5 não tem CascadeClassifier
 ```
 
 ### ❌ "Nenhuma fonte de vídeo configurada"
@@ -286,16 +291,15 @@ python src/security_system.py  # Cria automaticamente
 ### ❌ "TensorFlow não encontrado"
 
 ```bash
-# Instale TensorFlow
-pip install tensorflow
-
-# Ou CPU-only (mais leve)
-pip install tensorflow-cpu
+# Só é necessário com models/behavior_detection_model.h5
+pip install -r requirements-ml.txt
 ```
 
 ---
 
 ## 📊 Benchmarks
+
+> ⚠️ Valores não verificados na auditoria de 2026-11-22.
 
 | Hardware | FPS | CPU | RAM | Câmeras |
 |----------|-----|-----|-----|---------|
